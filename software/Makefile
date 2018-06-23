@@ -5,9 +5,13 @@ GIT_DATE    := $(firstword $(shell git --no-pager show --date=iso-strict --forma
 PREFIX = $(DESTDIR)/usr/local
 
 INCLUDEFTDI = /usr/local/include/libftdi1
+INCLUDELIBUSB = /usr/local/include/libusb-1.0
 #INCLUDEFTDI = /usr/include/libftdi1
+#INCLUDELIBUSB = 
 
-CFLAGS = -Wall -Wextra -Werror -std=c99 -O3 -I Keccak -I $(INCLUDEFTDI) \
+CFLAGS = -Wall -Wextra -Werror -std=c99 -O3 -I Keccak \
+ -I $(INCLUDEFTDI) \
+ -I $(INCLUDELIBUSB) \
  -DGIT_VERSION=\"$(GIT_VERSION)\"\
  -DGIT_COMMIT=\"$(GIT_COMMIT)\"\
  -DGIT_DATE=\"$(GIT_DATE)\"\
@@ -21,9 +25,11 @@ else
 endif
 
 # Still doesn't work with macOS
-#FTDI= /usr/local/lib/libftdi1.dylib /usr/local/lib/libusb.dylib
-# FreeBSD works ok with this (use Port libftdi1 and stock libusb)
 FTDI= -L/usr/local/lib -lftdi -lusb
+#FTDI= /usr/local/lib/libftdi1.dylib /usr/local/lib/libusb.dylib
+#FTDI= /usr/local/lib/libftdi.dylib /usr/local/lib/libusb.dylib
+# FreeBSD works ok with this (use Port libftdi1 and stock libusb)
+#FTDI= -L/usr/local/lib -lftdi -lusb
 
 #LIBRT = -lrt
 # FreeBSD and macOS doesn't need librt
