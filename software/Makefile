@@ -4,7 +4,10 @@ GIT_DATE    := $(firstword $(shell git --no-pager show --date=iso-strict --forma
 
 PREFIX = $(DESTDIR)/usr/local
 
-CFLAGS = -Wall -Wextra -Werror -std=c99 -O3 -I Keccak -I /usr/include/libftdi1 \
+INCLUDEFTDI = /usr/local/include/libftdi1
+#INCLUDEFTDI = /usr/include/libftdi1
+
+CFLAGS = -Wall -Wextra -Werror -std=c99 -O3 -I Keccak -I $(INCLUDEFTDI) \
  -DGIT_VERSION=\"$(GIT_VERSION)\"\
  -DGIT_COMMIT=\"$(GIT_COMMIT)\"\
  -DGIT_DATE=\"$(GIT_DATE)\"\
@@ -17,10 +20,19 @@ else
         FTDI=   -lftdi1
 endif
 
+# Still doesn't work with macOS
+#FTDI= /usr/local/lib/libftdi1.dylib /usr/local/lib/libusb.dylib
+# FreeBSD works ok with this (use Port libftdi1 and stock libusb)
+FTDI= -L/usr/local/lib -lftdi -lusb
+
+#LIBRT = -lrt
+# FreeBSD and macOS doesn't need librt
+LIBRT = 
+
 all: infnoise
 
 infnoise: infnoise.c infnoise.h healthcheck.c writeentropy.c daemon.c Keccak/KeccakF-1600-reference.c Keccak/brg_endian.h
-	$(CC) $(CFLAGS) -o infnoise infnoise.c healthcheck.c writeentropy.c daemon.c Keccak/KeccakF-1600-reference.c $(FTDI) -lm -lrt
+	$(CC) $(CFLAGS) -o infnoise infnoise.c healthcheck.c writeentropy.c daemon.c Keccak/KeccakF-1600-reference.c $(FTDI) -lm $(LIBRT)
 
 clean:
 	$(RM) infnoise

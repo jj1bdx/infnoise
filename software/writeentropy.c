@@ -7,7 +7,9 @@
 #include <sys/poll.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#ifdef __linux__
 #include <linux/random.h>
+#endif
 #include "infnoise.h"
 
 #define SIZE_PROC_FILENAME "/proc/sys/kernel/random/poolsize"
@@ -16,9 +18,12 @@
 static uint32_t inmBufLen;
 static bool inmDebug;
 static int inmDevRandomFD;
+#ifdef __linux__
 static uint32_t inmFillWatermark;
 static struct rand_pool_info *inmPoolInfo;
+#endif
 
+#ifdef __linux__
 // Find the entropy pool size.
 static uint32_t readNumberFromFile(char *fileName) {
     FILE *file = fopen(fileName, "r");
@@ -38,6 +43,7 @@ static uint32_t readNumberFromFile(char *fileName) {
     fclose(file);
     return value;
 }
+#endif
 
 // Open /dev/random
 void inmWriteEntropyStart(uint32_t bufLen, struct opt_struct* opts) {
@@ -49,6 +55,7 @@ void inmWriteEntropyStart(uint32_t bufLen, struct opt_struct* opts) {
         fprintf(stderr, "Unable to open /dev/random\n");
         exit(1);
     }
+#ifdef __linux__
     inmPoolInfo = calloc(1, sizeof(struct rand_pool_info) + bufLen);
     if(inmPoolInfo == NULL) {
         fprintf(stderr, "Unable to allocate memory\n");
@@ -58,10 +65,12 @@ void inmWriteEntropyStart(uint32_t bufLen, struct opt_struct* opts) {
     if(inmDebug) {
         printf("Entropy pool size:%u, fill watermark:%u\n", readNumberFromFile(SIZE_PROC_FILENAME), inmFillWatermark);
     }
+#endif
 }
 
 // Block until either the entropy pool has room, or 1 minute has passed.
 void inmWaitForPoolToHaveRoom() {
+#ifdef __linux__
     int ent_count;
     struct pollfd pfd = {
         .fd = inmDevRandomFD,
@@ -71,15 +80,22 @@ void inmWaitForPoolToHaveRoom() {
         return;
     }
     poll(&pfd, 1, 1000u * 60u); // One minute
+#endif
 }
 
 // Add the bytes to the entropy pool.  This can be unwhitenened, but the estimated bits of
 // entropy needs to be accurate or pessimistic.  Return false if the Linux entropy pool is
 // full after writing.
 void inmWriteEntropyToPool(uint8_t *bytes, uint32_t length, uint32_t entropy) {
+#ifdef __linux__
     inmPoolInfo->entropy_count = entropy;
     inmPoolInfo->buf_size = length;
     memcpy(inmPoolInfo->buf, bytes, length);
     //printf("Writing %u bytes with %u bits of entropy to /dev/random\n", length, entropy);
     ioctl(inmDevRandomFD, RNDADDENTROPY, inmPoolInfo);
+#else
+    // dummy code
+    bytes++;
+    printf("Dummy code of writing %u bytes with %u bits of entropy to /dev/random\n", length, entropy);
+#endif
 }
