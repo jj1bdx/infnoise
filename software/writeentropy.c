@@ -60,12 +60,12 @@ void inmWriteEntropyEnd() {
 }
 
 // Block until either the entropy pool has room, or 1 minute has passed.
-void inmWaitForPoolToHaveRoom() {
+void inmWaitForPoolToHaveRoom(uint32_t feed_frequency) {
     int ent_count;
     if (ioctl(pfd.fd, RNDGETENTCNT, &ent_count) == 0 && (uint32_t)ent_count < inmFillWatermark) {
         return;
     }
-    poll(&pfd, 1, -1); // waits until /dev/random is in usage
+    poll(&pfd, 1, 1000u * feed_frequency); // waits until /dev/random is in usage
 }
 
 // Add the bytes to the entropy pool.  This can be unwhitenened, but the estimated bits of

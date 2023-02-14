@@ -31,6 +31,7 @@ void term(int signum)
 
 static void initOpts(struct opt_struct *opts) {
     opts->outputMultiplier = 0u;
+    opts->feedFreq = 0u;
     opts->daemon = false;
     opts->debug = false;
     opts->devRandom = false;
@@ -50,6 +51,7 @@ static struct option longopts[] = {
         {"debug",        no_argument,       NULL, 'D'},
         {"dev-random",   no_argument,       NULL, 'R'},
         {"no-output",    no_argument,       NULL, 'n'},
+        {"feed-frequency",    required_argument, NULL, 'f'},
         {"multiplier",   required_argument, NULL, 'm'},
         {"pidfile",      required_argument, NULL, 'p'},
         {"serial",       required_argument, NULL, 's'},
@@ -60,7 +62,7 @@ static struct option longopts[] = {
         {NULL,           0,                 NULL, 0}};
 
 // Write the bytes to either stdout, or /dev/random.
-bool outputBytes(uint8_t *bytes, uint32_t length, uint32_t entropy, bool writeDevRandom, const char **message) {
+bool outputBytes(uint8_t *bytes, uint32_t length, uint32_t entropy, bool writeDevRandom, uint32_t feedFrequency, const char **message) {
     if (!writeDevRandom) {
         if (fwrite(bytes, 1, length, stdout) != length) {
             *message = "Unable to write output from Infinite Noise Multiplier";
@@ -93,7 +95,7 @@ bool outputBytes(uint8_t *bytes, uint32_t length, uint32_t entropy, bool writeDe
         return false;
 #endif
 #ifdef LINUX
-        inmWaitForPoolToHaveRoom();
+        inmWaitForPoolToHaveRoom(feedFrequency);
         inmWriteEntropyToPool(bytes, length, entropy);
 #endif
     }
@@ -109,7 +111,7 @@ int main(int argc, char **argv) {
     initOpts(&opts);
 
     // Process arguments
-    while ((ch = getopt_long(argc, argv, "rDRnm:p:s:dlvh", longopts, NULL)) !=
+    while ((ch = getopt_long(argc, argv, "rDRnf:m:p:s:dlvh", longopts, NULL)) !=
            -1) {
         switch (ch) {
             case 'r':
@@ -123,6 +125,14 @@ int main(int argc, char **argv) {
                 break;
             case 'n':
                 opts.noOutput = true;
+                break;
+            case 'f': ;
+                int tmpFeedrate = atoi(optarg);
+                if (tmpFeedrate < 0) {
+                    fputs("feed-freq must be >= 0\n", stderr);
+                    return 1;
+                }
+                opts.feedFreq = tmpFeedrate;
                 break;
             case 'm':
                 multiplierAssigned = true;
@@ -174,6 +184,7 @@ int main(int argc, char **argv) {
               "    -r, --raw - do not whiten the output\n"
               "    -m, --multiplier <value> - write 256 bits * value for each 512 bits written to\n"
               "      the Keccak sponge.  Default of 0 means write all the entropy.\n"
+              "    -f, --feed-frequency - feed interval for /dev/random\n"
               "    -n, --no-output - do not write random output data\n"
               "    -p, --pidfile <file> - write process ID to file\n"
               "    -d, --daemon - run in the background\n"
@@ -298,8 +309,7 @@ int main(int argc, char **argv) {
         }
 
         if (!opts.noOutput
-            && !outputBytes(result, bytesWritten, context.entropyThisTime, opts.devRandom,
-                             &context.message)) {
+            && !outputBytes(result, bytesWritten, context.entropyThisTime, opts.devRandom, opts.feedFreq, &context.message)) {
             fprintf(stderr, "Error: %s\n", context.message);
             return 1;
         }
