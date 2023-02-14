@@ -31,7 +31,7 @@ void term(int signum)
 
 static void initOpts(struct opt_struct *opts) {
     opts->outputMultiplier = 0u;
-    opts->feedFreq = 0u;
+    opts->feedFreq = 30u;
     opts->daemon = false;
     opts->debug = false;
     opts->devRandom = false;
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
               "    -r, --raw - do not whiten the output\n"
               "    -m, --multiplier <value> - write 256 bits * value for each 512 bits written to\n"
               "      the Keccak sponge.  Default of 0 means write all the entropy.\n"
-              "    -f, --feed-frequency - feed interval for /dev/random\n"
+              "    -f, --feed-frequency - feed interval for /dev/random, in seconds (default: 30)\n"
               "    -n, --no-output - do not write random output data\n"
               "    -p, --pidfile <file> - write process ID to file\n"
               "    -d, --daemon - run in the background\n"
