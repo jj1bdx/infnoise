@@ -91,7 +91,9 @@ bool outputBytes(uint8_t *bytes, uint32_t length, uint32_t entropy, bool writeDe
 #endif
 #if defined(__APPLE__)
         *message = "macOS doesn't support writes to entropy pool";
-        entropy = 0; // suppress warning
+        // suppress warning
+        (void) entropy;
+        (void) feedFrequency;
         return false;
 #endif
 #ifdef LINUX
